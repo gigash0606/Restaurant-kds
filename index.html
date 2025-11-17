@@ -4,111 +4,136 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pannello Stato Ordini KDS</title>
-
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Playfair+Display:wght@900&family=Great+Vibes&display=swap" rel="stylesheet">
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #1e293b; padding: 1rem; display: flex; justify-content: center; }
-    #main-ui { max-width: 900px; width: 100%; display: none; }
-
-    .text-shadow-lg { text-shadow: 1.5px 1.5px 3px rgba(0,0,0,0.75); }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #232120 60%, #222224 100%);
+      font-family: 'Inter', sans-serif;
+      display: flex; justify-content: center;
+      margin: 0;
+      padding: 0;
+    }
+    #main-ui {
+      width: 100%;
+      max-width: 950px;
+      margin-top: 30px;
+      box-shadow: 0 0 100px rgba(0,0,0,0.4);
+      background: rgba(35,33,32,0.98);
+      border-radius: 1.5rem;
+      padding: 1rem;
+      display: none;
+    }
+    header {
+      padding: 1.5rem 1rem 0.3rem 1rem;
+      border-radius: 1.2rem 1.2rem 0.4rem 0.4rem;
+      background: transparent;
+      text-align: center;
+      margin-bottom: 0.2rem;
+      user-select: none;
+    }
+    .gold-script {
+      font-family: 'Great Vibes', cursive;
+      font-size: 2.2rem;
+      color: #d6ad60;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+    .white-bold {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem;
+      color: #fff;
+      font-weight: 900;
+      margin-bottom: 0.1rem;
+      letter-spacing: 0.02em;
+    }
+    .flag-bar {
+      width: 85px;
+      height: 6px;
+      margin: 0.7rem auto 1.2rem auto;
+      border-radius: 3px;
+      background:
+        linear-gradient(to right,
+          #21873e 0%, #21873e 33%,
+          #fff 33%, #fff 66%,
+          #af1d25 66%, #af1d25 100%);
+      box-shadow: 0 0 3px #0005;
+    }
+    #reset-all {
+      margin-top: 1.4rem;
+      margin-bottom: 1rem;
+      background-color: #d6ad60;
+      color: #222224;
+      border: none;
+      font-family: 'Inter', sans-serif;
+      border-radius: 0.7rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.6rem 2.2rem;
+      box-shadow: 0 2px 12px #0003;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.03em;
+    }
+    #reset-all:hover {
+      background-color: #c49a53;
+      color: #fff;
+    }
+    main {
+      padding: 0.5rem 1rem 1rem 1rem;
+    }
+    .grid-kds {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+      gap: 1.3rem;
+      justify-items: center;
+    }
     .order-button {
       width: 80px;
       height: 80px;
-      font-size: 2.75rem;
+      font-size: 2.4rem;
+      font-family: 'Inter', sans-serif;
       font-weight: 900;
+      color: #fff;
+      background: #232120;
+      border: 2.5px solid #d6ad60;
+      border-radius: 1.5rem;
+      box-shadow: 0 2px 18px #000a;
+      cursor: pointer;
+      outline: none;
+      transition: box-shadow 0.2s, background 0.25s, border 0.23s;
+      user-select: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 9999px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      cursor: pointer;
-      user-select: none;
-      color: white;
-      touch-action: manipulation;
     }
-    .order-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+    .order-button:hover, .order-button:active {
+      box-shadow: 0 6px 22px #000c;
+      border-color: #ebce89;
+      background: #2a2827;
     }
-    .order-button:active {
-      transform: scale(0.96);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-    }
-
+    .order-button.pending { background: #232120; color: #fff; box-shadow: 0 2px 12px #0007;}
+    .order-button.making  { background: #d6ad60; color: #222224;}
+    .order-button.ready   { background: #8bc34a; color: #222224;}
+    .order-button.making, .order-button.ready { border-color: #d6ad60; }
     .animate-pulse-making {
-      animation: pulse-making 2s cubic-bezier(0.4,0,0.6,1) infinite;
-      box-shadow: 0 0 12px 4px rgba(253,224,71,0.8);
+      animation: pulse-making 1.3s cubic-bezier(0.4,0,0.6,1) infinite;
     }
     @keyframes pulse-making {
-      0%,100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.07); opacity: 0.85; }
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
-
-    .grid-kds {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-      gap: 1rem;
-      justify-items: center;
-      margin-top: 1rem;
-      user-select: none;
-    }
-
-    header {
-      background-color: #111827;
-      border-radius: 0.75rem;
-      padding: 1rem 1.5rem;
-      margin-bottom: 1rem;
-      text-align: center;
-      border-bottom: 4px solid #6366f1;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
-      color: white;
-      font-weight: 900;
-      font-size: 1.8rem;
-      user-select: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-    }
-    #reset-all {
-      background-color: #ef4444;
-      border: none;
-      border-radius: 0.5rem;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      color: white;
-      font-weight: 700;
-      font-size: 1rem;
-      transition: background-color 0.3s ease;
-      user-select: none;
-      white-space: nowrap;
-    }
-    #reset-all:hover {
-      background-color: #dc2626;
-    }
-    #reset-all:active {
-      background-color: #b91c1c;
-    }
-
-    main {
-      background-color: #111827;
-      border-radius: 0.75rem;
-      padding: 1rem;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-    }
-
-    /* Confirmation modal for Reset All */
     #confirmation-modal {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.75);
+      background: rgba(40,38,37,0.95);
       display: none;
       align-items: center;
       justify-content: center;
@@ -125,114 +150,91 @@
       to {opacity: 1;}
     }
     #confirmation-modal > div {
-      background-color: #1e293b;
-      color: white;
+      background-color: #232120;
+      color: #fff;
       border-radius: 1rem;
       padding: 2rem 2.5rem;
       box-shadow: 0 10px 32px rgba(0,0,0,0.7);
       max-width: 380px;
       width: 100%;
       text-align: center;
+      border: 2px solid #d6ad60;
     }
-
     #confirmation-modal h3 {
-      font-size: 2.2rem;
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
       margin-bottom: 1rem;
       font-weight: 900;
+      color: #d6ad60;
     }
-
     #confirmation-modal p {
-      font-size: 1.1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.12rem;
       margin-bottom: 2rem;
       font-weight: 700;
+      color: #fff;
     }
-
     #confirmation-modal button {
-      width: 72px;
-      height: 72px;
-      font-size: 2.75rem;
+      width: 64px;
+      height: 64px;
+      font-size: 2.25rem;
       border-radius: 9999px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
       border: none;
-      color: white;
+      color: #fff;
       cursor: pointer;
-      transition: background-color 0.25s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
       margin: 0 1rem;
     }
     #cancel-button {
       background-color: #b91c1c;
     }
-    #cancel-button:hover {
-      background-color: #ef4444;
-    }
     #confirm-button {
-      background-color: #16a34a;
+      background-color: #8bc34a;
+      color: #222224;
     }
-    #confirm-button:hover {
-      background-color: #22c55e;
-    }
-    #cancel-button[title], #confirm-button[title] {
-      position: relative;
-    }
-    #cancel-button[title]:hover::after, #confirm-button[title]:hover::after {
-      content: attr(title);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0,0,0,0.8);
-      color: white;
-      padding: 0.25rem 0.5rem;
-      border-radius: 0.25rem;
-      white-space: nowrap;
-      font-size: 0.75rem;
-    }
-
-    /* Password overlay */
     #password-overlay {
       position: fixed;
       inset: 0;
-      background-color: #111827;
+      background: #232120e9;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 99999;
       color: white;
-      padding: 2rem;
       font-size: 1.25rem;
       user-select: none;
+      font-family: 'Inter', sans-serif;
     }
     #password-overlay input {
       margin-top: 1rem;
-      padding: 0.6rem 1rem;
-      border: none;
-      border-radius: 0.5rem;
+      padding: 0.6rem 1.1rem;
+      border: 2px solid #d6ad60;
+      border-radius: 0.6rem;
       font-size: 1.3rem;
       font-weight: 700;
       text-align: center;
       width: 180px;
       outline: none;
-      color: black;
+      color: #222224;
+      background: #fdf6e3;
     }
     #password-overlay button {
       margin-top: 1rem;
-      padding: 0.6rem 1.5rem;
+      padding: 0.6rem 1.7rem;
       font-size: 1.3rem;
       font-weight: 700;
       border: none;
-      border-radius: 0.5rem;
-      background-color: #6366f1;
-      color: white;
+      border-radius: 0.6rem;
+      background-color: #d6ad60;
+      color: #232120;
       cursor: pointer;
       transition: background-color 0.3s ease;
+      font-family: 'Inter', sans-serif;
     }
     #password-overlay button:hover {
-      background-color: #4f46e5;
+      background-color: #c49a53;
+      color: #fff;
     }
     #password-error {
       margin-top: 0.75rem;
@@ -249,7 +251,9 @@
 
   <!-- Password overlay -->
   <div id="password-overlay">
-    <div>Inserisci la password</div>
+    <div class="gold-script">Ristorante & Pizzeria</div>
+    <div class="white-bold">Pannello Stato Ordini</div>
+    <div class="flag-bar"></div>
     <input type="password" id="password-input" placeholder="Password" autofocus />
     <button id="password-submit">Entra</button>
     <div id="password-error">Password errata, riprova.</div>
@@ -258,15 +262,14 @@
   <!-- Main UI container -->
   <div id="main-ui">
     <header>
-      <div>Pannello Stato Ordini KDS</div>
+      <div class="gold-script">Ristorante & Pizzeria</div>
+      <div class="white-bold">Pannello Stato Ordini</div>
+      <div class="flag-bar"></div>
       <button id="reset-all" title="Resetta tutti gli ordini a 'Aperto'">Resetta Tutti</button>
     </header>
-
     <main>
       <div id="kds-grid" class="grid-kds"></div>
     </main>
-
-    <!-- Confirmation modal for Reset All -->
     <div id="confirmation-modal" role="dialog" aria-modal="true">
       <div>
         <h3>Conferma reset</h3>
@@ -279,13 +282,37 @@
     </div>
   </div>
 
-  <!-- New modern notification sound -->
-  <audio id="ready-sound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
   <script>
+    // Web Audio API smooth dual oscillator notification tone
+    let audioCtx = null;
+    let unlocked = false;
+    function playNotificationTone() {
+      if (!unlocked) return;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+      gain.connect(audioCtx.destination);
+
+      const osc1 = audioCtx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(660, now);
+      osc1.connect(gain);
+
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(1320, now);
+      osc2.connect(gain);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.8);
+      osc2.stop(now + 0.8);
+    }
+
     // Password overlay logic
     const correctPassword = "1234";
     const passwordOverlay = document.getElementById('password-overlay');
@@ -293,7 +320,6 @@
     const passwordSubmit = document.getElementById('password-submit');
     const passwordError = document.getElementById('password-error');
     const mainUI = document.getElementById('main-ui');
-    const readySound = document.getElementById('ready-sound');
 
     function showError() {
       passwordError.classList.add('visible');
@@ -301,17 +327,15 @@
     function hideError() {
       passwordError.classList.remove('visible');
     }
-
     passwordSubmit.addEventListener('click', () => {
       if(passwordInput.value === correctPassword) {
         hideError();
         passwordOverlay.style.display = 'none';
         mainUI.style.display = 'block';
-
-        // Unlock audio playback after user interaction
-        document.body.addEventListener('click', function enableSound() {
-          readySound.play().catch(() => {});
-          document.body.removeEventListener('click', enableSound);
+        document.body.addEventListener('click', function unlockSound() {
+          unlocked = true;
+          playNotificationTone();
+          document.body.removeEventListener('click', unlockSound);
         }, {once: true});
       } else {
         showError();
@@ -319,14 +343,13 @@
         passwordInput.focus();
       }
     });
-
     passwordInput.addEventListener('keypress', (e) => {
       if(e.key === 'Enter') {
         passwordSubmit.click();
       }
     });
 
-    // Firebase config & init
+    // Firebase Config & Init
     const firebaseConfig = {
       apiKey: "AIzaSyBM5yvJgNt8-cBPa58wUzE3TbWZREWGqCg",
       authDomain: "kds-26.firebaseapp.com",
@@ -343,9 +366,9 @@
     const ordersRef = database.ref('orders');
 
     const STATUS_MAP = {
-      pending: { color: 'bg-gray-600', label: 'Aperto' },
-      making: { color: 'bg-yellow-500', label: 'In Preparazione' },
-      ready: { color: 'bg-green-500', label: 'Pronto' }
+      pending: { color: 'pending', label: 'Aperto' },
+      making: { color: 'making', label: 'In Preparazione' },
+      ready: { color: 'ready', label: 'Pronto' }
     };
     const STATUS_ORDER = ['pending', 'making', 'ready'];
 
@@ -362,13 +385,12 @@
       grid.innerHTML = "";
       mockOrders.forEach(order => {
         const btn = document.createElement("button");
-        btn.className = `order-button text-white font-extrabold ${STATUS_MAP[order.status].color}`;
+        btn.className = `order-button ${STATUS_MAP[order.status].color}`;
         if (order.status === 'making') {
           btn.classList.add("animate-pulse-making");
         }
         btn.textContent = order.number;
         btn.onclick = () => {
-          // Immediately cycle status on click
           const currentIndex = STATUS_ORDER.indexOf(order.status);
           const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
           ordersRef.child(order.id).update({ status: nextStatus });
@@ -377,7 +399,6 @@
       });
     }
 
-    // Reset All confirmation modal handlers
     resetAllButton.onclick = () => {
       modal.classList.add('show');
     };
@@ -389,29 +410,22 @@
       mockOrders.forEach(order => {
         resetData[order.id] = {...order, status: 'pending'};
       });
-      ordersRef.update(resetData)
-        .catch(error => {
-          console.error("Error resetting orders:", error);
-        });
+      ordersRef.update(resetData).catch(console.error);
       modal.classList.remove('show');
     };
 
-    // Listen to Firebase realtime updates
     ordersRef.on('value', snapshot => {
       const data = snapshot.val() || {};
       mockOrders = Object.values(data);
-
       renderButtons();
-
       mockOrders.forEach(order => {
         if (order.status === 'ready' && lastOrderStatuses[order.id] !== 'ready') {
-          readySound.play().catch(() => {});
+          playNotificationTone();
         }
         lastOrderStatuses[order.id] = order.status;
       });
     });
 
-    // Initialize orders if none present
     ordersRef.once('value').then(snapshot => {
       if (!snapshot.exists()) {
         const initialOrders = {};
