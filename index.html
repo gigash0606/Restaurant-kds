@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Pannello Stato Ordini KDS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Playfair+Display:wght@900&family=Great+Vibes&display=swap" rel="stylesheet">
@@ -12,7 +12,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
-    /* Previous full styles here unchanged */
     body {
       min-height: 100vh;
       background: linear-gradient(135deg, #232120 60%, #222224 100%);
@@ -246,29 +245,6 @@
     #password-error.visible {
       visibility: visible;
     }
-
-    /* Responsive font size tweaks for iPhone */
-    @media (max-width: 480px) {
-      .white-bold {
-        font-size: 1.6rem !important;
-        margin-bottom: 0.15rem;
-      }
-      .gold-script {
-        font-size: 1.6rem !important;
-        margin-bottom: 0.15rem;
-      }
-      #password-overlay {
-        padding: 1rem 0.8rem;
-      }
-      #password-input {
-        width: 140px !important;
-        font-size: 1.1rem !important;
-      }
-      #password-overlay button {
-        font-size: 1.1rem !important;
-        padding: 0.5rem 1.2rem !important;
-      }
-    }
   </style>
 </head>
 <body>
@@ -289,6 +265,7 @@
       <div class="gold-script">Ristorante & Pizzeria</div>
       <div class="white-bold">Pannello Stato Ordini</div>
       <div class="flag-bar"></div>
+
       <button id="reset-all" title="Resetta tutti gli ordini a 'Aperto'">Resetta Tutti</button>
     </header>
     <main>
@@ -307,6 +284,40 @@
   </div>
 
   <script>
+    // Keep screen awake with Wake Lock API
+    let wakeLock = null;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator && wakeLock === null) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            console.log('Screen Wake Lock released');
+          });
+          console.log('Screen Wake Lock enabled');
+        }
+      } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+      }
+    }
+    document.body.addEventListener('click', () => {
+      requestWakeLock();
+    }, {once: true});
+    document.addEventListener('visibilitychange', () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    });
+
+    // Prevent double-tap zoom on mobile Safari
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', event => {
+      let now = (new Date()).getTime();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+
     // Web Audio API smooth dual oscillator notification tone
     let audioCtx = null;
     let unlocked = false;
@@ -356,9 +367,11 @@
         hideError();
         passwordOverlay.style.display = 'none';
         mainUI.style.display = 'block';
+        unlocked = false;
         document.body.addEventListener('click', function unlockSound() {
           unlocked = true;
           playNotificationTone();
+          requestWakeLock();
           document.body.removeEventListener('click', unlockSound);
         }, {once: true});
       } else {
