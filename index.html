@@ -3,92 +3,314 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pannello Stato Ordini KDS (Demo Online con Firebase)</title>
+  <title>Pannello Stato Ordini KDS (Demo Online con Password e Suono)</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet" />
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    .text-shadow-lg { text-shadow: 2px 2px 4px rgba(0,0,0,0.6); }
-    .animate-pulse-making {
-      animation: pulse-making 1.5s cubic-bezier(0.4,0,0.6,1) infinite;
-    }
-    @keyframes pulse-making {
-      0%,100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.9; transform: scale(1.03); }
-    }
-    .grid-kds {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-      gap: 1.5rem;
-    }
-    @media (min-width: 640px) {
-      .grid-kds {
-        grid-template-columns: repeat(6, 1fr);
-      }
-    }
+    body { font-family: 'Inter', sans-serif; background-color: #1e293b; padding: 1rem; display: flex; justify-content: center; }
+    #main-ui { max-width: 900px; width: 100%; display: none; }
+
+    .text-shadow-lg { text-shadow: 1.5px 1.5px 3px rgba(0,0,0,0.75); }
     .order-button {
-      width: 100%;
-      aspect-ratio: 1/1;
-      font-size: 2.25rem;
+      width: 80px;
+      height: 80px;
+      font-size: 2.75rem;
+      font-weight: 900;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 9999px;
-      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5), 0 10px 10px -5px rgba(0,0,0,0.5);
-      transition: transform .25s;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
       cursor: pointer;
+      user-select: none;
+      color: white;
     }
     .order-button:hover {
-      transform: scale(1.05);
+      transform: scale(1.1);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+    }
+    .order-button:active {
+      transform: scale(0.96);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+    }
+
+    .animate-pulse-making {
+      animation: pulse-making 2s cubic-bezier(0.4,0,0.6,1) infinite;
+      box-shadow: 0 0 12px 4px rgba(253,224,71,0.8);
+    }
+    @keyframes pulse-making {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.07); opacity: 0.85; }
+    }
+
+    .grid-kds {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 1rem;
+      justify-items: center;
+      margin-top: 1rem;
+    }
+
+    header {
+      background-color: #111827;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      border-bottom: 4px solid #6366f1;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+      color: white;
+      font-weight: 900;
+      font-size: 1.8rem;
+      user-select: none;
+    }
+
+    #message-container {
+      background-color: #111827;
+      border-radius: 0.75rem;
+      color: white;
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #message-container.visible {
+      opacity: 1;
+    }
+
+    main {
+      background-color: #111827;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    }
+
+    /* MODAL */
+    #confirmation-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 9999;
+      animation: fadeIn 0.3s ease forwards;
+    }
+    #confirmation-modal.show {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    #confirmation-modal > div {
+      background-color: #1e293b;
+      color: white;
+      border-radius: 1rem;
+      padding: 2rem 2.5rem;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.7);
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      user-select: none;
+    }
+
+    #confirmation-modal h3 {
+      font-size: 2.8rem;
+      margin-bottom: 1rem;
+      font-weight: 900;
+    }
+
+    #confirmation-modal p {
+      font-size: 1.15rem;
+      margin-bottom: 2rem;
+      font-weight: 700;
+    }
+
+    #confirmation-modal button {
+      width: 72px;
+      height: 72px;
+      font-size: 2.75rem;
+      border-radius: 9999px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      border: none;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.25s ease;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #cancel-button {
+      background-color: #b91c1c;
+    }
+    #cancel-button:hover {
+      background-color: #ef4444;
+    }
+    #confirm-button {
+      background-color: #16a34a;
+    }
+    #confirm-button:hover {
+      background-color: #22c55e;
+    }
+    #cancel-button[title], #confirm-button[title] {
+      position: relative;
+    }
+    #cancel-button[title]:hover::after, #confirm-button[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0,0,0,0.8);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      white-space: nowrap;
+      font-size: 0.75rem;
+    }
+
+    /* Password overlay */
+    #password-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: #111827;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      color: white;
+      padding: 2rem;
+      font-size: 1.25rem;
+      user-select: none;
+    }
+    #password-overlay input {
+      margin-top: 1rem;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      width: 180px;
+      outline: none;
+      color: black;
+    }
+    #password-overlay button {
+      margin-top: 1rem;
+      padding: 0.6rem 1.5rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 0.5rem;
+      background-color: #6366f1;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #password-overlay button:hover {
+      background-color: #4f46e5;
+    }
+    #password-error {
+      margin-top: 0.75rem;
+      color: #ef4444;
+      font-weight: 700;
+      visibility: hidden;
+    }
+    #password-error.visible {
+      visibility: visible;
     }
   </style>
 </head>
+<body>
 
-<body class="bg-gray-800 p-4 min-h-screen">
-
-  <header class="bg-gray-900 p-4 rounded-xl mb-4 border-b-4 border-indigo-600">
-    <h1 class="text-3xl text-white font-extrabold text-center">
-      Pannello Stato Ordini (DEMO Online Firebase)
-    </h1>
-  </header>
-
-  <div id="message-container" class="p-3 bg-gray-900 text-white text-sm rounded-lg mb-4">
-    <p id="system-message">Caricamento dati...</p>
+  <!-- Password overlay -->
+  <div id="password-overlay">
+    <div>Inserisci la password</div>
+    <input type="password" id="password-input" placeholder="Password" autofocus />
+    <button id="password-submit">Entra</button>
+    <div id="password-error">Password errata, riprova.</div>
   </div>
 
-  <main class="bg-gray-900 rounded-xl p-4 shadow-xl">
-    <div id="kds-grid" class="grid grid-kds gap-4 sm:gap-6 p-2"></div>
-  </main>
+  <!-- Main UI container -->
+  <div id="main-ui">
+    <header>
+      Pannello Stato Ordini (Demo Online con Password e Suono)
+    </header>
 
-  <!-- MODAL -->
-  <div id="confirmation-modal"
-       class="fixed inset-0 bg-black bg-opacity-70 items-center justify-center p-4 hidden z-50">
-    <div class="bg-gray-900 text-white rounded-xl shadow-2xl w-full max-w-sm p-6">
-      <h3 id="modal-table-number" class="text-4xl font-extrabold text-center mb-4"></h3>
-      <p id="modal-status-preview" class="text-lg text-center font-medium mb-6"></p>
+    <div id="message-container"></div>
 
-      <div class="flex justify-around">
-        <button id="cancel-button"
-                class="w-24 h-24 text-5xl bg-red-700 hover:bg-red-600 rounded-full shadow-xl flex items-center justify-center">
-          ✖
-        </button>
+    <main>
+      <div id="kds-grid" class="grid-kds"></div>
+    </main>
 
-        <button id="confirm-button"
-                class="w-24 h-24 text-5xl bg-green-600 hover:bg-green-500 rounded-full shadow-xl flex items-center justify-center">
-          ✔
-        </button>
+    <div id="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="modal-table-number" aria-describedby="modal-status-preview">
+      <div>
+        <h3 id="modal-table-number"></h3>
+        <p id="modal-status-preview"></p>
+
+        <div style="display:flex; justify-content:center; gap:2rem;">
+          <button id="cancel-button" title="Annulla">✖</button>
+          <button id="confirm-button" title="Conferma">✔</button>
+        </div>
       </div>
     </div>
   </div>
 
+  <audio id="ready-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
   <script>
-    // Firebase configuration
+    // Password overlay logic
+    const correctPassword = "1234";
+
+    const passwordOverlay = document.getElementById('password-overlay');
+    const passwordInput = document.getElementById('password-input');
+    const passwordSubmit = document.getElementById('password-submit');
+    const passwordError = document.getElementById('password-error');
+    const mainUI = document.getElementById('main-ui');
+
+    function showError() {
+      passwordError.classList.add('visible');
+    }
+    function hideError() {
+      passwordError.classList.remove('visible');
+    }
+
+    passwordSubmit.addEventListener('click', () => {
+      if(passwordInput.value === correctPassword) {
+        hideError();
+        passwordOverlay.style.display = 'none';
+        mainUI.style.display = 'block';
+      } else {
+        showError();
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    });
+
+    passwordInput.addEventListener('keypress', (e) => {
+      if(e.key === 'Enter') {
+        passwordSubmit.click();
+      }
+    });
+
+    // Firebase config & init
     const firebaseConfig = {
       apiKey: "AIzaSyBM5yvJgNt8-cBPa58wUzE3TbWZREWGqCg",
       authDomain: "kds-26.firebaseapp.com",
@@ -99,9 +321,8 @@
       appId: "1:199994611000:web:11d238d463d0881f039dcd",
       measurementId: "G-PP210K3L6J"
     };
-
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+
     const database = firebase.database();
     const ordersRef = database.ref('orders');
 
@@ -110,69 +331,65 @@
       making: { color: 'bg-yellow-500', label: 'In Prep' },
       ready: { color: 'bg-green-500', label: 'Pronto' }
     };
-
     const STATUS_ORDER = ['pending', 'making', 'ready'];
 
+    const messageContainer = document.getElementById('message-container');
+    const grid = document.getElementById('kds-grid');
+    const modal = document.getElementById('confirmation-modal');
+    const modalTableNumber = document.getElementById('modal-table-number');
+    const modalStatusPreview = document.getElementById('modal-status-preview');
+    const cancelButton = document.getElementById('cancel-button');
+    const confirmButton = document.getElementById('confirm-button');
+    const readySound = document.getElementById('ready-sound');
+
     let mockOrders = [];
+    let orderToUpdate = null;
+    let nextStatusToApply = null;
+    let lastOrderStatuses = {};
 
-    // UI Functions
-    const setMessage = (msg) => {
-      document.getElementById("system-message").textContent = msg;
-    };
+    function setMessage(msg) {
+      messageContainer.textContent = msg;
+      messageContainer.classList.add('visible');
+      setTimeout(() => {
+        messageContainer.classList.remove('visible');
+      }, 2500);
+    }
 
-    const openModal = (order) => {
+    function openModal(order) {
       orderToUpdate = order;
-
       const currentIndex = STATUS_ORDER.indexOf(order.status);
       const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
-
       nextStatusToApply = nextStatus;
 
-      document.getElementById("modal-table-number").innerHTML =
-        `Tavolo <span class="text-indigo-400">${order.number}</span>`;
+      modalTableNumber.innerHTML = `Tavolo <span class="text-indigo-400">${order.number}</span>`;
+      modalStatusPreview.innerHTML = `Attuale: <b>${STATUS_MAP[order.status].label}</b> → Prossimo: <b>${STATUS_MAP[nextStatus].label}</b>`;
 
-      document.getElementById("modal-status-preview").innerHTML =
-        `Attuale: <b>${STATUS_MAP[order.status].label}</b> → Prossimo: <b>${STATUS_MAP[nextStatus].label}</b>`;
+      modal.classList.add('show');
+    }
 
-      const modal = document.getElementById("confirmation-modal");
-      modal.classList.remove("hidden");
-      modal.classList.add("flex");
-    };
+    function closeModal() {
+      modal.classList.remove('show');
+      orderToUpdate = null;
+      nextStatusToApply = null;
+    }
 
-    const closeModal = () => {
-      const modal = document.getElementById("confirmation-modal");
-      modal.classList.add("hidden");
-      modal.classList.remove("flex");
-    };
-
-    const renderButtons = () => {
-      const grid = document.getElementById("kds-grid");
+    function renderButtons() {
       grid.innerHTML = "";
-
       mockOrders.forEach(order => {
         const btn = document.createElement("button");
-
-        btn.className =
-          `order-button text-white font-extrabold ${STATUS_MAP[order.status].color}`;
-
+        btn.className = `order-button text-white font-extrabold ${STATUS_MAP[order.status].color}`;
         if (order.status === 'making') {
-          btn.classList.add("animate-pulse-making", "ring-4", "ring-yellow-300");
+          btn.classList.add("animate-pulse-making");
         }
-
-        btn.innerHTML = `<span class="text-shadow-lg">${order.number}</span>`;
+        btn.textContent = order.number;
         btn.onclick = () => openModal(order);
 
         grid.appendChild(btn);
       });
-    };
+    }
 
-    // Update logic
-    let orderToUpdate = null;
-    let nextStatusToApply = null;
-
-    const applyUpdate = () => {
+    function applyUpdate() {
       if (!orderToUpdate || !nextStatusToApply) return;
-
       ordersRef.child(orderToUpdate.id).update({ status: nextStatusToApply })
         .then(() => {
           setMessage(`Tavolo ${orderToUpdate.number} aggiornato a: ${STATUS_MAP[nextStatusToApply].label}`);
@@ -180,39 +397,39 @@
         })
         .catch(error => {
           setMessage(`Errore aggiornamento: ${error.message}`);
+          closeModal();
         });
-    };
+    }
 
-    document.getElementById("confirm-button").onclick = applyUpdate;
-    document.getElementById("cancel-button").onclick = closeModal;
+    cancelButton.onclick = closeModal;
+    confirmButton.onclick = applyUpdate;
 
-    // Initialize orders if not already present in Firebase
+    // Listen to the orders in realtime from Firebase
+    ordersRef.on('value', snapshot => {
+      const data = snapshot.val() || {};
+      mockOrders = Object.values(data);
+
+      renderButtons();
+      setMessage("Sistema operativo (Modalità Online - Dati Firebase)");
+
+      // Play sound on newly ready orders (green)
+      mockOrders.forEach(order => {
+        if (order.status === 'ready' && lastOrderStatuses[order.id] !== 'ready') {
+          readySound.play().catch(() => { /* ignore autoplay block */ });
+        }
+        lastOrderStatuses[order.id] = order.status;
+      });
+    });
+
+    // Initialize default orders if missing
     ordersRef.once('value').then(snapshot => {
       if (!snapshot.exists()) {
         const initialOrders = {};
         for (let i = 1; i <= 26; i++) {
           initialOrders[String(i)] = { id: String(i), number: i, status: 'pending' };
         }
-        ordersRef.set(initialOrders)
-          .then(() => {
-            console.log("Initialized orders in Firebase.");
-          })
-          .catch(error => {
-            console.error("Error initializing orders:", error);
-          });
+        ordersRef.set(initialOrders).catch(console.error);
       }
-    });
-
-    // Listen for realtime updates on orders
-    ordersRef.on('value', snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        mockOrders = Object.values(data);
-      } else {
-        mockOrders = [];
-      }
-      renderButtons();
-      setMessage("Sistema operativo (Modalità Online - Dati Firebase)");
     });
   </script>
 
