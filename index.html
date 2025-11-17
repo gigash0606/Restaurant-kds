@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pannello Stato Ordini KDS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Playfair+Display:wght@900&family=Great+Vibes&display=swap" rel="stylesheet">
@@ -12,6 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
+    /* Existing styles unchanged */
     body {
       min-height: 100vh;
       background: linear-gradient(135deg, #232120 60%, #222224 100%);
@@ -245,6 +246,29 @@
     #password-error.visible {
       visibility: visible;
     }
+
+    /* Responsive font size tweaks for iPhone */
+    @media (max-width: 480px) {
+      .white-bold {
+        font-size: 1.6rem !important;
+        margin-bottom: 0.15rem;
+      }
+      .gold-script {
+        font-size: 1.6rem !important;
+        margin-bottom: 0.15rem;
+      }
+      #password-overlay {
+        padding: 1rem 0.8rem;
+      }
+      #password-input {
+        width: 140px !important;
+        font-size: 1.1rem !important;
+      }
+      #password-overlay button {
+        font-size: 1.1rem !important;
+        padding: 0.5rem 1.2rem !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -265,7 +289,6 @@
       <div class="gold-script">Ristorante & Pizzeria</div>
       <div class="white-bold">Pannello Stato Ordini</div>
       <div class="flag-bar"></div>
-
       <button id="reset-all" title="Resetta tutti gli ordini a 'Aperto'">Resetta Tutti</button>
     </header>
     <main>
@@ -283,196 +306,179 @@
     </div>
   </div>
 
-  <script>
-    // Keep screen awake with Wake Lock API
-    let wakeLock = null;
-    async function requestWakeLock() {
-      try {
-        if ('wakeLock' in navigator && wakeLock === null) {
-          wakeLock = await navigator.wakeLock.request('screen');
-          wakeLock.addEventListener('release', () => {
-            console.log('Screen Wake Lock released');
-          });
-          console.log('Screen Wake Lock enabled');
-        }
-      } catch (err) {
-        console.error(`${err.name}, ${err.message}`);
-      }
+<script>
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => {
+        console.log('Screen Wake Lock was released');
+      });
+      console.log('Screen Wake Lock is active');
+    } catch (err) {
+      console.error(`${err.name}, ${err.message}`);
     }
-    document.body.addEventListener('click', () => {
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
       requestWakeLock();
-    }, {once: true});
-    document.addEventListener('visibilitychange', () => {
-      if (wakeLock !== null && document.visibilityState === 'visible') {
-        requestWakeLock();
-      }
-    });
-
-    // Prevent double-tap zoom on mobile Safari
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', event => {
-      let now = (new Date()).getTime();
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-      }
-      lastTouchEnd = now;
-    }, false);
-
-    // Web Audio API smooth dual oscillator notification tone
-    let audioCtx = null;
-    let unlocked = false;
-    function playNotificationTone() {
-      if (!unlocked) return;
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const now = audioCtx.currentTime;
-
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-      gain.connect(audioCtx.destination);
-
-      const osc1 = audioCtx.createOscillator();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(660, now);
-      osc1.connect(gain);
-
-      const osc2 = audioCtx.createOscillator();
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(1320, now);
-      osc2.connect(gain);
-
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 0.8);
-      osc2.stop(now + 0.8);
     }
+  });
 
-    // Password overlay logic
-    const correctPassword = "1234";
-    const passwordOverlay = document.getElementById('password-overlay');
-    const passwordInput = document.getElementById('password-input');
-    const passwordSubmit = document.getElementById('password-submit');
-    const passwordError = document.getElementById('password-error');
-    const mainUI = document.getElementById('main-ui');
+  // Web Audio API smooth dual oscillator notification tone
+  let audioCtx = null;
+  let unlocked = false;
+  function playNotificationTone() {
+    if (!unlocked) return;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
 
-    function showError() {
-      passwordError.classList.add('visible');
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+    gain.connect(audioCtx.destination);
+
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(660, now);
+    osc1.connect(gain);
+
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(1320, now);
+    osc2.connect(gain);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.8);
+    osc2.stop(now + 0.8);
+  }
+
+  const correctPassword = "1234";
+  const passwordOverlay = document.getElementById('password-overlay');
+  const passwordInput = document.getElementById('password-input');
+  const passwordSubmit = document.getElementById('password-submit');
+  const passwordError = document.getElementById('password-error');
+  const mainUI = document.getElementById('main-ui');
+
+  function showError() {
+    passwordError.classList.add('visible');
+  }
+  function hideError() {
+    passwordError.classList.remove('visible');
+  }
+  passwordSubmit.addEventListener('click', async () => {
+    if(passwordInput.value === correctPassword) {
+      hideError();
+      passwordOverlay.style.display = 'none';
+      mainUI.style.display = 'block';
+      document.body.addEventListener('click', function enableAudio() {
+        unlocked = true;
+        playNotificationTone();
+        document.body.removeEventListener('click', enableAudio);
+      }, {once: true});
+      await requestWakeLock();
+    } else {
+      showError();
+      passwordInput.value = '';
+      passwordInput.focus();
     }
-    function hideError() {
-      passwordError.classList.remove('visible');
+  });
+  passwordInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') {
+      passwordSubmit.click();
     }
-    passwordSubmit.addEventListener('click', () => {
-      if(passwordInput.value === correctPassword) {
-        hideError();
-        passwordOverlay.style.display = 'none';
-        mainUI.style.display = 'block';
-        unlocked = false;
-        document.body.addEventListener('click', function unlockSound() {
-          unlocked = true;
-          playNotificationTone();
-          requestWakeLock();
-          document.body.removeEventListener('click', unlockSound);
-        }, {once: true});
-      } else {
-        showError();
-        passwordInput.value = '';
-        passwordInput.focus();
+  });
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBM5yvJgNt8-cBPa58wUzE3TbWZREWGqCg",
+    authDomain: "kds-26.firebaseapp.com",
+    databaseURL: "https://kds-26-default-rtdb.firebaseio.com",
+    projectId: "kds-26",
+    storageBucket: "kds-26.firebasestorage.app",
+    messagingSenderId: "199994611000",
+    appId: "1:199994611000:web:11d238d463d0881f039dcd",
+    measurementId: "G-PP210K3L6J"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const database = firebase.database();
+  const ordersRef = database.ref('orders');
+
+  const STATUS_MAP = {
+    pending: { color: 'pending', label: 'Aperto' },
+    making: { color: 'making', label: 'In Preparazione' },
+    ready: { color: 'ready', label: 'Pronto' }
+  };
+  const STATUS_ORDER = ['pending', 'making', 'ready'];
+
+  const grid = document.getElementById('kds-grid');
+  const modal = document.getElementById('confirmation-modal');
+  const cancelButton = document.getElementById('cancel-button');
+  const confirmButton = document.getElementById('confirm-button');
+  const resetAllButton = document.getElementById('reset-all');
+
+  let mockOrders = [];
+  let lastOrderStatuses = {};
+
+  function renderButtons() {
+    grid.innerHTML = "";
+    mockOrders.forEach(order => {
+      const btn = document.createElement("button");
+      btn.className = `order-button ${STATUS_MAP[order.status].color}`;
+      if (order.status === 'making') {
+        btn.classList.add("animate-pulse-making");
       }
+      btn.textContent = order.number;
+      btn.onclick = () => {
+        const currentIndex = STATUS_ORDER.indexOf(order.status);
+        const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
+        ordersRef.child(order.id).update({ status: nextStatus });
+      };
+      grid.appendChild(btn);
     });
-    passwordInput.addEventListener('keypress', (e) => {
-      if(e.key === 'Enter') {
-        passwordSubmit.click();
+  }
+
+  resetAllButton.onclick = () => {
+    modal.classList.add('show');
+  };
+  cancelButton.onclick = () => {
+    modal.classList.remove('show');
+  };
+  confirmButton.onclick = () => {
+    const resetData = {};
+    mockOrders.forEach(order => {
+      resetData[order.id] = {...order, status: 'pending'};
+    });
+    ordersRef.update(resetData).catch(console.error);
+    modal.classList.remove('show');
+  };
+
+  ordersRef.on('value', snapshot => {
+    const data = snapshot.val() || {};
+    mockOrders = Object.values(data);
+    renderButtons();
+    mockOrders.forEach(order => {
+      if (order.status === 'ready' && lastOrderStatuses[order.id] !== 'ready') {
+        playNotificationTone();
       }
+      lastOrderStatuses[order.id] = order.status;
     });
+  });
 
-    // Firebase Config & Init
-    const firebaseConfig = {
-      apiKey: "AIzaSyBM5yvJgNt8-cBPa58wUzE3TbWZREWGqCg",
-      authDomain: "kds-26.firebaseapp.com",
-      databaseURL: "https://kds-26-default-rtdb.firebaseio.com",
-      projectId: "kds-26",
-      storageBucket: "kds-26.firebasestorage.app",
-      messagingSenderId: "199994611000",
-      appId: "1:199994611000:web:11d238d463d0881f039dcd",
-      measurementId: "G-PP210K3L6J"
-    };
-    firebase.initializeApp(firebaseConfig);
-
-    const database = firebase.database();
-    const ordersRef = database.ref('orders');
-
-    const STATUS_MAP = {
-      pending: { color: 'pending', label: 'Aperto' },
-      making: { color: 'making', label: 'In Preparazione' },
-      ready: { color: 'ready', label: 'Pronto' }
-    };
-    const STATUS_ORDER = ['pending', 'making', 'ready'];
-
-    const grid = document.getElementById('kds-grid');
-    const modal = document.getElementById('confirmation-modal');
-    const cancelButton = document.getElementById('cancel-button');
-    const confirmButton = document.getElementById('confirm-button');
-    const resetAllButton = document.getElementById('reset-all');
-
-    let mockOrders = [];
-    let lastOrderStatuses = {};
-
-    function renderButtons() {
-      grid.innerHTML = "";
-      mockOrders.forEach(order => {
-        const btn = document.createElement("button");
-        btn.className = `order-button ${STATUS_MAP[order.status].color}`;
-        if (order.status === 'making') {
-          btn.classList.add("animate-pulse-making");
-        }
-        btn.textContent = order.number;
-        btn.onclick = () => {
-          const currentIndex = STATUS_ORDER.indexOf(order.status);
-          const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
-          ordersRef.child(order.id).update({ status: nextStatus });
-        };
-        grid.appendChild(btn);
-      });
+  ordersRef.once('value').then(snapshot => {
+    if (!snapshot.exists()) {
+      const initialOrders = {};
+      for (let i = 1; i <= 26; i++) {
+        initialOrders[String(i)] = { id: String(i), number: i, status: 'pending' };
+      }
+      ordersRef.set(initialOrders).catch(console.error);
     }
-
-    resetAllButton.onclick = () => {
-      modal.classList.add('show');
-    };
-    cancelButton.onclick = () => {
-      modal.classList.remove('show');
-    };
-    confirmButton.onclick = () => {
-      const resetData = {};
-      mockOrders.forEach(order => {
-        resetData[order.id] = {...order, status: 'pending'};
-      });
-      ordersRef.update(resetData).catch(console.error);
-      modal.classList.remove('show');
-    };
-
-    ordersRef.on('value', snapshot => {
-      const data = snapshot.val() || {};
-      mockOrders = Object.values(data);
-      renderButtons();
-      mockOrders.forEach(order => {
-        if (order.status === 'ready' && lastOrderStatuses[order.id] !== 'ready') {
-          playNotificationTone();
-        }
-        lastOrderStatuses[order.id] = order.status;
-      });
-    });
-
-    ordersRef.once('value').then(snapshot => {
-      if (!snapshot.exists()) {
-        const initialOrders = {};
-        for (let i = 1; i <= 26; i++) {
-          initialOrders[String(i)] = { id: String(i), number: i, status: 'pending' };
-        }
-        ordersRef.set(initialOrders).catch(console.error);
-      }
-    });
-  </script>
+  });
+</script>
 
 </body>
 </html>
