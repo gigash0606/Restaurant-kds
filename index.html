@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pannello Stato Ordini KDS (Demo Online con Password e Suono)</title>
+  <title>Pannello Stato Ordini KDS</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap" rel="stylesheet" />
@@ -31,6 +31,7 @@
       cursor: pointer;
       user-select: none;
       color: white;
+      touch-action: manipulation;
     }
     .order-button:hover {
       transform: scale(1.1);
@@ -56,12 +57,13 @@
       gap: 1rem;
       justify-items: center;
       margin-top: 1rem;
+      user-select: none;
     }
 
     header {
       background-color: #111827;
       border-radius: 0.75rem;
-      padding: 1rem;
+      padding: 1rem 1.5rem;
       margin-bottom: 1rem;
       text-align: center;
       border-bottom: 4px solid #6366f1;
@@ -70,22 +72,29 @@
       font-weight: 900;
       font-size: 1.8rem;
       user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
     }
-
-    #message-container {
-      background-color: #111827;
-      border-radius: 0.75rem;
+    #reset-all {
+      background-color: #ef4444;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
       color: white;
-      font-size: 0.9rem;
-      padding: 0.6rem 1rem;
-      text-align: center;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-      opacity: 0;
-      transition: opacity 0.5s ease;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      white-space: nowrap;
     }
-    #message-container.visible {
-      opacity: 1;
+    #reset-all:hover {
+      background-color: #dc2626;
+    }
+    #reset-all:active {
+      background-color: #b91c1c;
     }
 
     main {
@@ -95,7 +104,7 @@
       box-shadow: 0 4px 16px rgba(0,0,0,0.6);
     }
 
-    /* MODAL */
+    /* Confirmation modal for Reset All */
     #confirmation-modal {
       position: fixed;
       inset: 0;
@@ -106,6 +115,7 @@
       padding: 1rem;
       z-index: 9999;
       animation: fadeIn 0.3s ease forwards;
+      user-select: none;
     }
     #confirmation-modal.show {
       display: flex;
@@ -120,20 +130,19 @@
       border-radius: 1rem;
       padding: 2rem 2.5rem;
       box-shadow: 0 10px 32px rgba(0,0,0,0.7);
-      max-width: 360px;
+      max-width: 380px;
       width: 100%;
       text-align: center;
-      user-select: none;
     }
 
     #confirmation-modal h3 {
-      font-size: 2.8rem;
+      font-size: 2.2rem;
       margin-bottom: 1rem;
       font-weight: 900;
     }
 
     #confirmation-modal p {
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       margin-bottom: 2rem;
       font-weight: 700;
     }
@@ -148,10 +157,11 @@
       color: white;
       cursor: pointer;
       transition: background-color 0.25s ease;
-      user-select: none;
       display: flex;
       align-items: center;
       justify-content: center;
+      user-select: none;
+      margin: 0 1rem;
     }
     #cancel-button {
       background-color: #b91c1c;
@@ -248,20 +258,19 @@
   <!-- Main UI container -->
   <div id="main-ui">
     <header>
-      Pannello Stato Ordini (Demo Online con Password e Suono)
+      <div>Pannello Stato Ordini KDS</div>
+      <button id="reset-all" title="Resetta tutti gli ordini a 'Aperto'">Resetta Tutti</button>
     </header>
-
-    <div id="message-container"></div>
 
     <main>
       <div id="kds-grid" class="grid-kds"></div>
     </main>
 
-    <div id="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="modal-table-number" aria-describedby="modal-status-preview">
+    <!-- Confirmation modal for Reset All -->
+    <div id="confirmation-modal" role="dialog" aria-modal="true">
       <div>
-        <h3 id="modal-table-number"></h3>
-        <p id="modal-status-preview"></p>
-
+        <h3>Conferma reset</h3>
+        <p>Sei sicuro di voler resettare tutti gli ordini allo stato "Aperto"?</p>
         <div style="display:flex; justify-content:center; gap:2rem;">
           <button id="cancel-button" title="Annulla">✖</button>
           <button id="confirm-button" title="Conferma">✔</button>
@@ -270,7 +279,8 @@
     </div>
   </div>
 
-  <audio id="ready-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+  <!-- New modern notification sound -->
+  <audio id="ready-sound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -278,12 +288,12 @@
   <script>
     // Password overlay logic
     const correctPassword = "1234";
-
     const passwordOverlay = document.getElementById('password-overlay');
     const passwordInput = document.getElementById('password-input');
     const passwordSubmit = document.getElementById('password-submit');
     const passwordError = document.getElementById('password-error');
     const mainUI = document.getElementById('main-ui');
+    const readySound = document.getElementById('ready-sound');
 
     function showError() {
       passwordError.classList.add('visible');
@@ -297,6 +307,12 @@
         hideError();
         passwordOverlay.style.display = 'none';
         mainUI.style.display = 'block';
+
+        // Unlock audio playback after user interaction
+        document.body.addEventListener('click', function enableSound() {
+          readySound.play().catch(() => {});
+          document.body.removeEventListener('click', enableSound);
+        }, {once: true});
       } else {
         showError();
         passwordInput.value = '';
@@ -328,50 +344,19 @@
 
     const STATUS_MAP = {
       pending: { color: 'bg-gray-600', label: 'Aperto' },
-      making: { color: 'bg-yellow-500', label: 'In Prep' },
+      making: { color: 'bg-yellow-500', label: 'In Preparazione' },
       ready: { color: 'bg-green-500', label: 'Pronto' }
     };
     const STATUS_ORDER = ['pending', 'making', 'ready'];
 
-    const messageContainer = document.getElementById('message-container');
     const grid = document.getElementById('kds-grid');
     const modal = document.getElementById('confirmation-modal');
-    const modalTableNumber = document.getElementById('modal-table-number');
-    const modalStatusPreview = document.getElementById('modal-status-preview');
     const cancelButton = document.getElementById('cancel-button');
     const confirmButton = document.getElementById('confirm-button');
-    const readySound = document.getElementById('ready-sound');
+    const resetAllButton = document.getElementById('reset-all');
 
     let mockOrders = [];
-    let orderToUpdate = null;
-    let nextStatusToApply = null;
     let lastOrderStatuses = {};
-
-    function setMessage(msg) {
-      messageContainer.textContent = msg;
-      messageContainer.classList.add('visible');
-      setTimeout(() => {
-        messageContainer.classList.remove('visible');
-      }, 2500);
-    }
-
-    function openModal(order) {
-      orderToUpdate = order;
-      const currentIndex = STATUS_ORDER.indexOf(order.status);
-      const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
-      nextStatusToApply = nextStatus;
-
-      modalTableNumber.innerHTML = `Tavolo <span class="text-indigo-400">${order.number}</span>`;
-      modalStatusPreview.innerHTML = `Attuale: <b>${STATUS_MAP[order.status].label}</b> → Prossimo: <b>${STATUS_MAP[nextStatus].label}</b>`;
-
-      modal.classList.add('show');
-    }
-
-    function closeModal() {
-      modal.classList.remove('show');
-      orderToUpdate = null;
-      nextStatusToApply = null;
-    }
 
     function renderButtons() {
       grid.innerHTML = "";
@@ -382,46 +367,51 @@
           btn.classList.add("animate-pulse-making");
         }
         btn.textContent = order.number;
-        btn.onclick = () => openModal(order);
-
+        btn.onclick = () => {
+          // Immediately cycle status on click
+          const currentIndex = STATUS_ORDER.indexOf(order.status);
+          const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
+          ordersRef.child(order.id).update({ status: nextStatus });
+        };
         grid.appendChild(btn);
       });
     }
 
-    function applyUpdate() {
-      if (!orderToUpdate || !nextStatusToApply) return;
-      ordersRef.child(orderToUpdate.id).update({ status: nextStatusToApply })
-        .then(() => {
-          setMessage(`Tavolo ${orderToUpdate.number} aggiornato a: ${STATUS_MAP[nextStatusToApply].label}`);
-          closeModal();
-        })
+    // Reset All confirmation modal handlers
+    resetAllButton.onclick = () => {
+      modal.classList.add('show');
+    };
+    cancelButton.onclick = () => {
+      modal.classList.remove('show');
+    };
+    confirmButton.onclick = () => {
+      const resetData = {};
+      mockOrders.forEach(order => {
+        resetData[order.id] = {...order, status: 'pending'};
+      });
+      ordersRef.update(resetData)
         .catch(error => {
-          setMessage(`Errore aggiornamento: ${error.message}`);
-          closeModal();
+          console.error("Error resetting orders:", error);
         });
-    }
+      modal.classList.remove('show');
+    };
 
-    cancelButton.onclick = closeModal;
-    confirmButton.onclick = applyUpdate;
-
-    // Listen to the orders in realtime from Firebase
+    // Listen to Firebase realtime updates
     ordersRef.on('value', snapshot => {
       const data = snapshot.val() || {};
       mockOrders = Object.values(data);
 
       renderButtons();
-      setMessage("Sistema operativo (Modalità Online - Dati Firebase)");
 
-      // Play sound on newly ready orders (green)
       mockOrders.forEach(order => {
         if (order.status === 'ready' && lastOrderStatuses[order.id] !== 'ready') {
-          readySound.play().catch(() => { /* ignore autoplay block */ });
+          readySound.play().catch(() => {});
         }
         lastOrderStatuses[order.id] = order.status;
       });
     });
 
-    // Initialize default orders if missing
+    // Initialize orders if none present
     ordersRef.once('value').then(snapshot => {
       if (!snapshot.exists()) {
         const initialOrders = {};
