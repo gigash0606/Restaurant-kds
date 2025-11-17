@@ -12,6 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
   <style>
+    /* Previous full styles here unchanged */
     body {
       min-height: 100vh;
       background: linear-gradient(135deg, #232120 60%, #222224 100%);
@@ -244,6 +245,29 @@
     }
     #password-error.visible {
       visibility: visible;
+    }
+
+    /* Responsive font size tweaks for iPhone */
+    @media (max-width: 480px) {
+      .white-bold {
+        font-size: 1.6rem !important;
+        margin-bottom: 0.15rem;
+      }
+      .gold-script {
+        font-size: 1.6rem !important;
+        margin-bottom: 0.15rem;
+      }
+      #password-overlay {
+        padding: 1rem 0.8rem;
+      }
+      #password-input {
+        width: 140px !important;
+        font-size: 1.1rem !important;
+      }
+      #password-overlay button {
+        font-size: 1.1rem !important;
+        padding: 0.5rem 1.2rem !important;
+      }
     }
   </style>
 </head>
