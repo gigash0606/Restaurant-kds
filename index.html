@@ -6,13 +6,11 @@
   <title>Pannello Stato Ordini KDS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Playfair+Display:wght@900&family=Great+Vibes&display=swap" rel="stylesheet">
-
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK compat (v9) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
   <style>
-    /* Existing styles unchanged */
     body {
       min-height: 100vh;
       background: linear-gradient(135deg, #232120 60%, #222224 100%);
@@ -121,8 +119,8 @@
       background: #2a2827;
     }
     .order-button.pending { background: #232120; color: #fff; box-shadow: 0 2px 12px #0007;}
-    .order-button.making  { background: #d6ad60; color: #222224;}
-    .order-button.ready   { background: #8bc34a; color: #222224;}
+    .order-button.making { background: #d6ad60; color: #222224;}
+    .order-button.ready { background: #8bc34a; color: #222224;}
     .order-button.making, .order-button.ready { border-color: #d6ad60; }
     .animate-pulse-making {
       animation: pulse-making 1.3s cubic-bezier(0.4,0,0.6,1) infinite;
@@ -246,8 +244,6 @@
     #password-error.visible {
       visibility: visible;
     }
-
-    /* Responsive font size tweaks for iPhone */
     @media (max-width: 480px) {
       .white-bold {
         font-size: 1.6rem !important;
@@ -272,8 +268,7 @@
   </style>
 </head>
 <body>
-
-  <!-- Password overlay -->
+  <!-- Password overlay (local PIN) -->
   <div id="password-overlay">
     <div class="gold-script">Ristorante & Pizzeria</div>
     <div class="white-bold">Pannello Stato Ordini</div>
@@ -283,7 +278,7 @@
     <div id="password-error">Password errata, riprova.</div>
   </div>
 
-  <!-- Main UI container -->
+  <!-- Main UI -->
   <div id="main-ui">
     <header>
       <div class="gold-script">Ristorante & Pizzeria</div>
@@ -307,92 +302,59 @@
   </div>
 
 <script>
+  // Wake Lock
   let wakeLock = null;
-
   async function requestWakeLock() {
     try {
       wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', () => {
-        console.log('Screen Wake Lock was released');
-      });
       console.log('Screen Wake Lock is active');
     } catch (err) {
       console.error(`${err.name}, ${err.message}`);
     }
   }
-
   document.addEventListener('visibilitychange', () => {
     if (wakeLock !== null && document.visibilityState === 'visible') {
       requestWakeLock();
     }
   });
 
-  // Web Audio API smooth dual oscillator notification tone
+  // Notification tone
   let audioCtx = null;
   let unlocked = false;
   function playNotificationTone() {
     if (!unlocked) return;
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const now = audioCtx.currentTime;
-
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
     gain.connect(audioCtx.destination);
-
     const osc1 = audioCtx.createOscillator();
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(660, now);
     osc1.connect(gain);
-
     const osc2 = audioCtx.createOscillator();
     osc2.type = 'triangle';
     osc2.frequency.setValueAtTime(1320, now);
     osc2.connect(gain);
-
     osc1.start(now);
     osc2.start(now);
     osc1.stop(now + 0.8);
     osc2.stop(now + 0.8);
   }
 
-  const correctPassword = "1234";
+  // DOM elements
   const passwordOverlay = document.getElementById('password-overlay');
   const passwordInput = document.getElementById('password-input');
   const passwordSubmit = document.getElementById('password-submit');
   const passwordError = document.getElementById('password-error');
   const mainUI = document.getElementById('main-ui');
 
-  function showError() {
-    passwordError.classList.add('visible');
-  }
-  function hideError() {
-    passwordError.classList.remove('visible');
-  }
-  passwordSubmit.addEventListener('click', async () => {
-    if(passwordInput.value === correctPassword) {
-      hideError();
-      passwordOverlay.style.display = 'none';
-      mainUI.style.display = 'block';
-      document.body.addEventListener('click', function enableAudio() {
-        unlocked = true;
-        playNotificationTone();
-        document.body.removeEventListener('click', enableAudio);
-      }, {once: true});
-      await requestWakeLock();
-    } else {
-      showError();
-      passwordInput.value = '';
-      passwordInput.focus();
-    }
-  });
-  passwordInput.addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') {
-      passwordSubmit.click();
-    }
-  });
+  // Local PIN (change if you want a different tablet PIN)
+  const LOCAL_PIN = "1234";
 
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyBM5yvJgNt8-cBPa58wUzE3TbWZREWGqCg",
     authDomain: "kds-26.firebaseapp.com",
@@ -400,85 +362,136 @@
     projectId: "kds-26",
     storageBucket: "kds-26.firebasestorage.app",
     messagingSenderId: "199994611000",
-    appId: "1:199994611000:web:11d238d463d0881f039dcd",
-    measurementId: "G-PP210K3L6J"
+    appId: "1:199994611000:web:11d238d463d0881f039dcd"
   };
-  firebase.initializeApp(firebaseConfig);
 
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
   const database = firebase.database();
   const ordersRef = database.ref('orders');
 
-  const STATUS_MAP = {
-    pending: { color: 'pending', label: 'Aperto' },
-    making: { color: 'making', label: 'In Preparazione' },
-    ready: { color: 'ready', label: 'Pronto' }
-  };
-  const STATUS_ORDER = ['pending', 'making', 'ready'];
+  // === IMPORTANT: INSERT YOUR SHARED ACCOUNT CREDENTIALS HERE ===
+  const SHARED_EMAIL = "gigash0606@gmail.com";       // ← CHANGE THIS
+  const SHARED_PASSWORD = "123456";    // ← CHANGE THIS
 
-  const grid = document.getElementById('kds-grid');
-  const modal = document.getElementById('confirmation-modal');
-  const cancelButton = document.getElementById('cancel-button');
-  const confirmButton = document.getElementById('confirm-button');
-  const resetAllButton = document.getElementById('reset-all');
+  // Login to Firebase with shared account
+  function loginToFirebase() {
+    auth.signInWithEmailAndPassword(SHARED_EMAIL, SHARED_PASSWORD)
+      .then(() => {
+        console.log("Firebase login successful");
+        initKDSApp();
+      })
+      .catch((error) => {
+        console.error("Firebase login error:", error.message);
+        alert("Errore di connessione a Firebase. Verifica internet o credenziali.");
+      });
+  }
 
-  let mockOrders = [];
-  let lastOrderStatuses = {};
+  // Local PIN handling
+  passwordSubmit.addEventListener('click', () => {
+    if (passwordInput.value === LOCAL_PIN) {
+      passwordError.classList.remove('visible');
+      passwordOverlay.style.display = 'none';
+      loginToFirebase();
+    } else {
+      passwordError.classList.add('visible');
+      passwordInput.value = '';
+      passwordInput.focus();
+    }
+  });
 
-  function renderButtons() {
-    grid.innerHTML = "";
-    mockOrders.forEach(order => {
-      const btn = document.createElement("button");
-      btn.className = `order-button ${STATUS_MAP[order.status].color}`;
-      if (order.status === 'making') {
-        btn.classList.add("animate-pulse-making");
+  passwordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') passwordSubmit.click();
+  });
+
+  // Main KDS app (runs only after successful Firebase login)
+  function initKDSApp() {
+    mainUI.style.display = 'block';
+    requestWakeLock();
+
+    // Unlock audio on first user interaction
+    document.body.addEventListener('click', function enableAudio() {
+      unlocked = true;
+      playNotificationTone();
+      document.body.removeEventListener('click', enableAudio);
+    }, { once: true });
+
+    const STATUS_MAP = {
+      pending: { color: 'pending', label: 'Aperto' },
+      making: { color: 'making', label: 'In Preparazione' },
+      ready: { color: 'ready', label: 'Pronto' }
+    };
+    const STATUS_ORDER = ['pending', 'making', 'ready'];
+
+    const grid = document.getElementById('kds-grid');
+    const modal = document.getElementById('confirmation-modal');
+    const cancelButton = document.getElementById('cancel-button');
+    const confirmButton = document.getElementById('confirm-button');
+    const resetAllButton = document.getElementById('reset-all');
+
+    let orders = [];
+    let lastStatuses = {};
+
+    function renderButtons() {
+      grid.innerHTML = '';
+      orders.forEach(order => {
+        const btn = document.createElement('button');
+        btn.className = `order-button ${STATUS_MAP[order.status].color}`;
+        if (order.status === 'making') btn.classList.add('animate-pulse-making');
+        btn.textContent = order.number;
+        btn.onclick = () => {
+          const currentIdx = STATUS_ORDER.indexOf(order.status);
+          const nextStatus = STATUS_ORDER[(currentIdx + 1) % STATUS_ORDER.length];
+          ordersRef.child(order.id).update({ status: nextStatus });
+        };
+        grid.appendChild(btn);
+      });
+    }
+
+    resetAllButton.onclick = () => modal.classList.add('show');
+    cancelButton.onclick = () => modal.classList.remove('show');
+    confirmButton.onclick = () => {
+      const updates = {};
+      orders.forEach(order => {
+        updates[`${order.id}/status`] = 'pending';
+      });
+      ordersRef.update(updates);
+      modal.classList.remove('show');
+    };
+
+    // Realtime listener
+    ordersRef.on('value', snapshot => {
+      const data = snapshot.val() || {};
+      orders = Object.values(data);
+      renderButtons();
+
+      orders.forEach(order => {
+        if (order.status === 'ready' && lastStatuses[order.id] !== 'ready') {
+          playNotificationTone();
+        }
+        lastStatuses[order.id] = order.status;
+      });
+    });
+
+    // Initialize database with 26 orders if empty
+    ordersRef.once('value').then(snapshot => {
+      if (!snapshot.exists()) {
+        const initial = {};
+        for (let i = 1; i <= 26; i++) {
+          const id = String(i);
+          initial[id] = { id, number: i, status: 'pending' };
+        }
+        ordersRef.set(initial);
       }
-      btn.textContent = order.number;
-      btn.onclick = () => {
-        const currentIndex = STATUS_ORDER.indexOf(order.status);
-        const nextStatus = STATUS_ORDER[(currentIndex + 1) % STATUS_ORDER.length];
-        ordersRef.child(order.id).update({ status: nextStatus });
-      };
-      grid.appendChild(btn);
     });
   }
 
-  resetAllButton.onclick = () => {
-    modal.classList.add('show');
-  };
-  cancelButton.onclick = () => {
-    modal.classList.remove('show');
-  };
-  confirmButton.onclick = () => {
-    const resetData = {};
-    mockOrders.forEach(order => {
-      resetData[order.id] = {...order, status: 'pending'};
-    });
-    ordersRef.update(resetData).catch(console.error);
-    modal.classList.remove('show');
-  };
-
-  ordersRef.on('value', snapshot => {
-    const data = snapshot.val() || {};
-    mockOrders = Object.values(data);
-    renderButtons();
-    mockOrders.forEach(order => {
-      if (order.status === 'ready' && lastOrderStatuses[order.id] !== 'ready') {
-        playNotificationTone();
-      }
-      lastOrderStatuses[order.id] = order.status;
-    });
-  });
-
-  ordersRef.once('value').then(snapshot => {
-    if (!snapshot.exists()) {
-      const initialOrders = {};
-      for (let i = 1; i <= 26; i++) {
-        initialOrders[String(i)] = { id: String(i), number: i, status: 'pending' };
-      }
-      ordersRef.set(initialOrders).catch(console.error);
+  // Auto-reconnect if already logged in (page refresh)
+  auth.onAuthStateChanged(user => {
+    if (user && passwordOverlay.style.display === 'none') {
+      initKDSApp();
     }
   });
 </script>
-
 </body>
 </html>
